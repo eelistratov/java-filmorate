@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import ru.yandex.practicum.filmorate.controller.UserController;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 
 import java.time.LocalDate;
 
@@ -191,7 +192,8 @@ class UserValidationTest {
         nonExistentUser.setName("Test");
         nonExistentUser.setBirthday(LocalDate.now());
 
-        ValidationException exception = assertThrows(ValidationException.class,
+
+        NotFoundException exception = assertThrows(NotFoundException.class,  // ← ИЗМЕНЕНО
                 () -> userController.updateUser(nonExistentUser));
         assertEquals("Пользователь с id 999 не найден", exception.getMessage());
     }

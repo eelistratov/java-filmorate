@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 
 import java.time.LocalDate;
 
@@ -167,7 +168,7 @@ class FilmValidationTest {
         nonExistentFilm.setReleaseDate(LocalDate.now());
         nonExistentFilm.setDuration(100);
 
-        ValidationException exception = assertThrows(ValidationException.class,
+        NotFoundException exception = assertThrows(NotFoundException.class,
                 () -> filmController.updateFilm(nonExistentFilm));
         assertEquals("Фильм с id 999 не найден", exception.getMessage());
     }

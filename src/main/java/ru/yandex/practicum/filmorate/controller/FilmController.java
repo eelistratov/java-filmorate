@@ -13,7 +13,7 @@ import java.util.*;
 public class FilmController {
     private final Map<Integer, Film> films = new HashMap<>();
     private int nextId = 1;
-    private final LocalDate MIN_RELEASE_DATE = LocalDate.of(1895, 12, 28);
+    private final LocalDate minReleaseDate = LocalDate.of(1895, 12, 28);
 
     @GetMapping("/films")
     public List<Film> getAllFilms() {
@@ -67,8 +67,8 @@ public class FilmController {
             throw new ValidationException("Дата релиза должна быть указана");
         }
 
-        if (film.getReleaseDate().isBefore(MIN_RELEASE_DATE)) {
-            log.error("Ошибка валидации: дата релиза {} раньше {}", film.getReleaseDate(), MIN_RELEASE_DATE);
+        if (film.getReleaseDate().isBefore(minReleaseDate)) {
+            log.error("Ошибка валидации: дата релиза {} раньше {}", film.getReleaseDate(), minReleaseDate);
             throw new ValidationException("Дата релиза не может быть раньше 28 декабря 1895 года");
         }
 

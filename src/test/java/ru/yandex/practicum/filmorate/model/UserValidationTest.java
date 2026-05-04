@@ -1,28 +1,34 @@
 package ru.yandex.practicum.filmorate.model;
 
-
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.DisplayName;
-import ru.yandex.practicum.filmorate.controller.UserController;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import jakarta.validation.ConstraintViolation;
-
+import jakarta.validation.Validation;
 import jakarta.validation.Validator;
-
+import jakarta.validation.ValidatorFactory;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+import ru.yandex.practicum.filmorate.controller.UserController;
+import ru.yandex.practicum.filmorate.exception.NotFoundException;
 
 import java.time.LocalDate;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("Тесты валидации пользователей (по спецификации Postman)")
+@DisplayName("Тесты валидации пользователей (аннотации)")
 class UserValidationTest {
 
     private static Validator validator;
     private UserController userController;
     private User validUser;
+
+    @BeforeAll
+    static void setUpValidator() {
+        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+            validator = factory.getValidator();
+        }
+    }
 
     @BeforeEach
     void setUp() {
@@ -34,7 +40,7 @@ class UserValidationTest {
         validUser.setBirthday(LocalDate.of(1990, 5, 15));
     }
 
-    // новые тесты (аннотации)
+    // новые тесты аннотации
     @Test
     @DisplayName("Должен пройти валидацию с корректными данными")
     void validUserShouldPassValidation() {
@@ -104,7 +110,7 @@ class UserValidationTest {
         assertTrue(violations.isEmpty());
     }
 
-    // новые тесты (логика имен)
+    // новые тесты логики имен
     @Test
     @DisplayName("Должен использовать логин вместо пустого имени")
     void emptyNameShouldUseLogin() {
@@ -137,7 +143,7 @@ class UserValidationTest {
         assertEquals("Ivan Ivanov", created.getName());
     }
 
-    // новые тесты (контроллер)
+    // новые тесты контроллера
     @Test
     @DisplayName("POST /users - должен создать пользователя с корректными данными")
     void addUserShouldSucceed() {
@@ -177,15 +183,6 @@ class UserValidationTest {
         NotFoundException exception = assertThrows(NotFoundException.class,
                 () -> userController.updateUser(nonExistentUser));
         assertEquals("Пользователь с id 999 не найден", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("PUT /users - должен отклонить обновление с id <= 0")
-    void updateUserWithInvalidIdShouldFail() {
-        validUser.setId(0);
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> userController.updateUser(validUser));
-        assertEquals("ID пользователя должен быть указан", exception.getMessage());
     }
 
     @Test

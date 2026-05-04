@@ -16,7 +16,7 @@ import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-@DisplayName("Тесты валидации фильмов (по файлу Postman)")
+@DisplayName("Тесты валидации фильмов (аннотации)")
 class FilmValidationTest {
 
     private static Validator validator;
@@ -25,8 +25,9 @@ class FilmValidationTest {
 
     @BeforeAll
     static void setUpValidator() {
-        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
-        validator = factory.getValidator();
+        try (ValidatorFactory factory = Validation.buildDefaultValidatorFactory()) {
+            validator = factory.getValidator();
+        }
     }
 
     @BeforeEach
@@ -39,7 +40,7 @@ class FilmValidationTest {
         validFilm.setDuration(148);
     }
 
-    // новые тесты (аннотаций)
+    // новые тесты аннотации
     @Test
     @DisplayName("Должен пройти валидацию с корректными данными")
     void validFilmShouldPassValidation() {
@@ -151,7 +152,7 @@ class FilmValidationTest {
         assertEquals("Продолжительность фильма должна быть положительной", violations.iterator().next().getMessage());
     }
 
-    // новые тесты (контроллер)
+    // новые тесты контроллера
     @Test
     @DisplayName("POST /films - должен создать фильм с корректными данными")
     void addFilmShouldSucceed() {

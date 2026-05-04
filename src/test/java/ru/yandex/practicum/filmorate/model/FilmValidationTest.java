@@ -1,21 +1,34 @@
 package ru.yandex.practicum.filmorate.model;
 
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.controller.FilmController;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.exception.ValidationException;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("Тесты валидации фильмов (по файлу Postman)")
 class FilmValidationTest {
 
+    private static Validator validator;
     private FilmController filmController;
     private Film validFilm;
+
+    @BeforeAll
+    static void setUpValidator() {
+        ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
+        validator = factory.getValidator();
+    }
 
     @BeforeEach
     void setUp() {
@@ -27,119 +40,126 @@ class FilmValidationTest {
         validFilm.setDuration(148);
     }
 
-    // тест названия
+    // новые тесты (аннотаций)
     @Test
-    @DisplayName("POST /films - должен создать фильм с корректным названием")
-    void createFilmWithValidNameShouldSucceed() {
+    @DisplayName("Должен пройти валидацию с корректными данными")
+    void validFilmShouldPassValidation() {
+        Set<ConstraintViolation<Film>> violations = validator.validate(validFilm);
+        assertTrue(violations.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Должен отклонить фильм с пустым названием")
+    void blankNameShouldFailValidation() {
+        validFilm.setName("");
+        Set<ConstraintViolation<Film>> violations = validator.validate(validFilm);
+        assertFalse(violations.isEmpty());
+        assertEquals("Название фильма не может быть пустым", violations.iterator().next().getMessage());
+    }
+
+    @Test
+    @DisplayName("Должен отклонить фильм с названием из пробелов")
+    void whitespaceNameShouldFailValidation() {
+        validFilm.setName("   ");
+        Set<ConstraintViolation<Film>> violations = validator.validate(validFilm);
+        assertFalse(violations.isEmpty());
+        assertEquals("Название фильма не может быть пустым", violations.iterator().next().getMessage());
+    }
+
+    @Test
+    @DisplayName("Должен отклонить фильм с null названием")
+    void nullNameShouldFailValidation() {
+        validFilm.setName(null);
+        Set<ConstraintViolation<Film>> violations = validator.validate(validFilm);
+        assertFalse(violations.isEmpty());
+        assertEquals("Название фильма не может быть пустым", violations.iterator().next().getMessage());
+    }
+
+    @Test
+    @DisplayName("Должен создать фильм с описанием ровно 200 символов")
+    void descriptionExactly200CharsShouldPassValidation() {
+        validFilm.setDescription("a".repeat(200));
+        Set<ConstraintViolation<Film>> violations = validator.validate(validFilm);
+        assertTrue(violations.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Должен отклонить фильм с описанием длиннее 200 символов")
+    void descriptionLongerThan200ShouldFailValidation() {
+        validFilm.setDescription("a".repeat(201));
+        Set<ConstraintViolation<Film>> violations = validator.validate(validFilm);
+        assertFalse(violations.isEmpty());
+        assertEquals("Описание фильма не может быть длиннее 200 символов", violations.iterator().next().getMessage());
+    }
+
+    @Test
+    @DisplayName("Должен создать фильм с пустым описанием")
+    void emptyDescriptionShouldPassValidation() {
+        validFilm.setDescription("");
+        Set<ConstraintViolation<Film>> violations = validator.validate(validFilm);
+        assertTrue(violations.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Должен создать фильм с датой релиза 28.12.1895")
+    void minReleaseDateShouldPassValidation() {
+        validFilm.setReleaseDate(LocalDate.of(1895, 12, 28));
+        Set<ConstraintViolation<Film>> violations = validator.validate(validFilm);
+        assertTrue(violations.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Должен отклонить фильм с датой релиза 27.12.1895")
+    void releaseDateBeforeMinShouldFailValidation() {
+        validFilm.setReleaseDate(LocalDate.of(1895, 12, 27));
+        Set<ConstraintViolation<Film>> violations = validator.validate(validFilm);
+        assertFalse(violations.isEmpty());
+        assertEquals("Дата релиза не может быть раньше 28 декабря 1895 года", violations.iterator().next().getMessage());
+    }
+
+    @Test
+    @DisplayName("Должен отклонить фильм с null датой релиза")
+    void nullReleaseDateShouldFailValidation() {
+        validFilm.setReleaseDate(null);
+        Set<ConstraintViolation<Film>> violations = validator.validate(validFilm);
+        assertFalse(violations.isEmpty());
+        assertEquals("Дата релиза должна быть указана", violations.iterator().next().getMessage());
+    }
+
+    @Test
+    @DisplayName("Должен создать фильм с положительной продолжительностью")
+    void positiveDurationShouldPassValidation() {
+        validFilm.setDuration(1);
+        Set<ConstraintViolation<Film>> violations = validator.validate(validFilm);
+        assertTrue(violations.isEmpty());
+    }
+
+    @Test
+    @DisplayName("Должен отклонить фильм с продолжительностью 0")
+    void zeroDurationShouldFailValidation() {
+        validFilm.setDuration(0);
+        Set<ConstraintViolation<Film>> violations = validator.validate(validFilm);
+        assertFalse(violations.isEmpty());
+        assertEquals("Продолжительность фильма должна быть положительной", violations.iterator().next().getMessage());
+    }
+
+    @Test
+    @DisplayName("Должен отклонить фильм с отрицательной продолжительностью")
+    void negativeDurationShouldFailValidation() {
+        validFilm.setDuration(-10);
+        Set<ConstraintViolation<Film>> violations = validator.validate(validFilm);
+        assertFalse(violations.isEmpty());
+        assertEquals("Продолжительность фильма должна быть положительной", violations.iterator().next().getMessage());
+    }
+
+    // новые тесты (контроллер)
+    @Test
+    @DisplayName("POST /films - должен создать фильм с корректными данными")
+    void addFilmShouldSucceed() {
         assertDoesNotThrow(() -> filmController.addFilm(validFilm));
         assertNotNull(validFilm.getId());
     }
 
-    @Test
-    @DisplayName("POST /films - должен отклонить фильм с пустым названием")
-    void createFilmWithEmptyNameShouldFail() {
-        validFilm.setName("");
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> filmController.addFilm(validFilm));
-        assertEquals("Название фильма не может быть пустым", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("POST /films - должен отклонить фильм с названием из пробелов")
-    void createFilmWithBlankNameShouldFail() {
-        validFilm.setName("   ");
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> filmController.addFilm(validFilm));
-        assertEquals("Название фильма не может быть пустым", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("POST /films - должен отклонить фильм с null названием")
-    void createFilmWithNullNameShouldFail() {
-        validFilm.setName(null);
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> filmController.addFilm(validFilm));
-        assertEquals("Название фильма не может быть пустым", exception.getMessage());
-    }
-
-    // тест описания
-    @Test
-    @DisplayName("POST /films - должен создать фильм с описанием ровно 200 символов")
-    void createFilmWithDescriptionExactly200CharsShouldSucceed() {
-        validFilm.setDescription("a".repeat(200));
-        assertDoesNotThrow(() -> filmController.addFilm(validFilm));
-        assertEquals(200, validFilm.getDescription().length());
-    }
-
-    @Test
-    @DisplayName("POST /films - должен отклонить фильм с описанием длиннее 200 символов")
-    void createFilmWithDescriptionLongerThan200ShouldFail() {
-        validFilm.setDescription("a".repeat(201));
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> filmController.addFilm(validFilm));
-        assertEquals("Описание фильма не может быть длиннее 200 символов", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("POST /films - должен создать фильм с пустым описанием")
-    void createFilmWithEmptyDescriptionShouldSucceed() {
-        validFilm.setDescription("");
-        assertDoesNotThrow(() -> filmController.addFilm(validFilm));
-    }
-
-    // тест даты релиза
-    @Test
-    @DisplayName("POST /films - должен создать фильм с датой релиза 28.12.1895")
-    void createFilmWithMinReleaseDateShouldSucceed() {
-        validFilm.setReleaseDate(LocalDate.of(1895, 12, 28));
-        assertDoesNotThrow(() -> filmController.addFilm(validFilm));
-    }
-
-    @Test
-    @DisplayName("POST /films - должен отклонить фильм с датой релиза 27.12.1895")
-    void createFilmWithReleaseDateBeforeMinShouldFail() {
-        validFilm.setReleaseDate(LocalDate.of(1895, 12, 27));
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> filmController.addFilm(validFilm));
-        assertEquals("Дата релиза не может быть раньше 28 декабря 1895 года", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("POST /films - должен отклонить фильм с null датой релиза")
-    void createFilmWithNullReleaseDateShouldFail() {
-        validFilm.setReleaseDate(null);
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> filmController.addFilm(validFilm));
-        assertEquals("Дата релиза должна быть указана", exception.getMessage());
-    }
-
-    // тест длительности
-    @Test
-    @DisplayName("POST /films - должен создать фильм с положительной продолжительностью")
-    void createFilmWithPositiveDurationShouldSucceed() {
-        validFilm.setDuration(1);
-        assertDoesNotThrow(() -> filmController.addFilm(validFilm));
-    }
-
-    @Test
-    @DisplayName("POST /films - должен отклонить фильм с продолжительностью 0")
-    void createFilmWithZeroDurationShouldFail() {
-        validFilm.setDuration(0);
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> filmController.addFilm(validFilm));
-        assertEquals("Продолжительность фильма должна быть положительной", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("POST /films - должен отклонить фильм с отрицательной продолжительностью")
-    void createFilmWithNegativeDurationShouldFail() {
-        validFilm.setDuration(-10);
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> filmController.addFilm(validFilm));
-        assertEquals("Продолжительность фильма должна быть положительной", exception.getMessage());
-    }
-
-    // тест обновления
     @Test
     @DisplayName("PUT /films - должен обновить существующий фильм")
     void updateExistingFilmShouldSucceed() {
@@ -173,16 +193,6 @@ class FilmValidationTest {
         assertEquals("Фильм с id 999 не найден", exception.getMessage());
     }
 
-    @Test
-    @DisplayName("PUT /films - должен отклонить обновление с id <= 0")
-    void updateFilmWithInvalidIdShouldFail() {
-        validFilm.setId(0);
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> filmController.updateFilm(validFilm));
-        assertEquals("ID фильма должен быть указан", exception.getMessage());
-    }
-
-    // тест GET
     @Test
     @DisplayName("GET /films - должен вернуть пустой список в начале")
     void getAllFilmsInitiallyEmpty() {

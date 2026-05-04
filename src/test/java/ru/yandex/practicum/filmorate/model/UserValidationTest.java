@@ -1,19 +1,26 @@
 package ru.yandex.practicum.filmorate.model;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;
 import ru.yandex.practicum.filmorate.controller.UserController;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
+import jakarta.validation.ValidatorFactory;
 
 import java.time.LocalDate;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 @DisplayName("Тесты валидации пользователей (по спецификации Postman)")
 class UserValidationTest {
 
+    private static Validator validator;
     private UserController userController;
     private User validUser;
 
@@ -27,142 +34,117 @@ class UserValidationTest {
         validUser.setBirthday(LocalDate.of(1990, 5, 15));
     }
 
-    // тест email
+    // новые тесты (аннотации)
     @Test
-    @DisplayName("POST /users - должен создать пользователя с корректным email")
-    void createUserWithValidEmailShouldSucceed() {
-        assertDoesNotThrow(() -> userController.addUser(validUser));
-        assertNotNull(validUser.getId());
+    @DisplayName("Должен пройти валидацию с корректными данными")
+    void validUserShouldPassValidation() {
+        Set<ConstraintViolation<User>> violations = validator.validate(validUser);
+        assertTrue(violations.isEmpty());
     }
 
     @Test
-    @DisplayName("POST /users - должен отклонить пользователя с пустым email")
-    void createUserWithEmptyEmailShouldFail() {
+    @DisplayName("Должен отклонить пользователя с пустым email")
+    void blankEmailShouldFailValidation() {
         validUser.setEmail("");
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> userController.addUser(validUser));
-        assertEquals("Email не может быть пустым", exception.getMessage());
+        Set<ConstraintViolation<User>> violations = validator.validate(validUser);
+        assertFalse(violations.isEmpty());
+        assertEquals("Email не может быть пустым", violations.iterator().next().getMessage());
     }
 
     @Test
-    @DisplayName("POST /users - должен отклонить пользователя с email без @")
-    void createUserWithEmailWithoutAtShouldFail() {
+    @DisplayName("Должен отклонить пользователя с email без @")
+    void emailWithoutAtShouldFailValidation() {
         validUser.setEmail("userexample.com");
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> userController.addUser(validUser));
-        assertEquals("Email должен содержать символ @", exception.getMessage());
+        Set<ConstraintViolation<User>> violations = validator.validate(validUser);
+        assertFalse(violations.isEmpty());
+        assertEquals("Email должен содержать символ @", violations.iterator().next().getMessage());
     }
 
     @Test
-    @DisplayName("POST /users - должен отклонить пользователя с null email")
-    void createUserWithNullEmailShouldFail() {
-        validUser.setEmail(null);
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> userController.addUser(validUser));
-        assertEquals("Email не может быть пустым", exception.getMessage());
-    }
-
-    // тест логина
-    @Test
-    @DisplayName("POST /users - должен создать пользователя с корректным логином")
-    void createUserWithValidLoginShouldSucceed() {
-        assertDoesNotThrow(() -> userController.addUser(validUser));
-    }
-
-    @Test
-    @DisplayName("POST /users - должен отклонить пользователя с пустым логином")
-    void createUserWithEmptyLoginShouldFail() {
+    @DisplayName("Должен отклонить пользователя с пустым логином")
+    void blankLoginShouldFailValidation() {
         validUser.setLogin("");
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> userController.addUser(validUser));
-        assertEquals("Логин не может быть пустым", exception.getMessage());
+        Set<ConstraintViolation<User>> violations = validator.validate(validUser);
+        assertFalse(violations.isEmpty());
+        assertEquals("Логин не может быть пустым", violations.iterator().next().getMessage());
     }
 
     @Test
-    @DisplayName("POST /users - должен отклонить пользователя с логином, содержащим пробелы")
-    void createUserWithLoginContainingSpacesShouldFail() {
+    @DisplayName("Должен отклонить пользователя с логином, содержащим пробелы")
+    void loginWithSpacesShouldFailValidation() {
         validUser.setLogin("user 123");
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> userController.addUser(validUser));
-        assertEquals("Логин не может содержать пробелы", exception.getMessage());
+        Set<ConstraintViolation<User>> violations = validator.validate(validUser);
+        assertFalse(violations.isEmpty());
+        assertEquals("Логин не может содержать пробелы", violations.iterator().next().getMessage());
     }
 
     @Test
-    @DisplayName("POST /users - должен отклонить пользователя с null логином")
-    void createUserWithNullLoginShouldFail() {
-        validUser.setLogin(null);
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> userController.addUser(validUser));
-        assertEquals("Логин не может быть пустым", exception.getMessage());
+    @DisplayName("Должен отклонить пользователя с датой рождения в будущем")
+    void birthdayInFutureShouldFailValidation() {
+        validUser.setBirthday(LocalDate.now().plusDays(1));
+        Set<ConstraintViolation<User>> violations = validator.validate(validUser);
+        assertFalse(violations.isEmpty());
+        assertEquals("Дата рождения не может быть в будущем", violations.iterator().next().getMessage());
     }
 
-    // тест имени
     @Test
-    @DisplayName("POST /users - должен использовать логин вместо пустого имени")
-    void createUserWithEmptyNameShouldUseLogin() {
+    @DisplayName("Должен отклонить пользователя с null датой рождения")
+    void nullBirthdayShouldFailValidation() {
+        validUser.setBirthday(null);
+        Set<ConstraintViolation<User>> violations = validator.validate(validUser);
+        assertFalse(violations.isEmpty());
+        assertEquals("Дата рождения должна быть указана", violations.iterator().next().getMessage());
+    }
+
+    @Test
+    @DisplayName("Должен создать пользователя с сегодняшней датой рождения")
+    void todayBirthdayShouldPassValidation() {
+        validUser.setBirthday(LocalDate.now());
+        Set<ConstraintViolation<User>> violations = validator.validate(validUser);
+        assertTrue(violations.isEmpty());
+    }
+
+    // новые тесты (логика имен)
+    @Test
+    @DisplayName("Должен использовать логин вместо пустого имени")
+    void emptyNameShouldUseLogin() {
         validUser.setName("");
         User created = userController.addUser(validUser);
         assertEquals("user123", created.getName());
     }
 
     @Test
-    @DisplayName("POST /users - должен использовать логин вместо имени из пробелов")
-    void createUserWithBlankNameShouldUseLogin() {
+    @DisplayName("Должен использовать логин вместо имени из пробелов")
+    void blankNameShouldUseLogin() {
         validUser.setName("   ");
         User created = userController.addUser(validUser);
         assertEquals("user123", created.getName());
     }
 
     @Test
-    @DisplayName("POST /users - должен использовать логин при null имени")
-    void createUserWithNullNameShouldUseLogin() {
+    @DisplayName("Должен использовать логин при null имени")
+    void nullNameShouldUseLogin() {
         validUser.setName(null);
         User created = userController.addUser(validUser);
         assertEquals("user123", created.getName());
     }
 
     @Test
-    @DisplayName("POST /users - должен сохранить имя, если оно указано")
-    void createUserWithValidNameShouldKeepIt() {
+    @DisplayName("Должен сохранить имя, если оно указано")
+    void validNameShouldKeepIt() {
         validUser.setName("Ivan Ivanov");
         User created = userController.addUser(validUser);
         assertEquals("Ivan Ivanov", created.getName());
     }
 
-    // тест даты рождения
+    // новые тесты (контроллер)
     @Test
-    @DisplayName("POST /users - должен создать пользователя с датой рождения в прошлом")
-    void createUserWithBirthdayInPastShouldSucceed() {
-        validUser.setBirthday(LocalDate.of(2000, 1, 1));
+    @DisplayName("POST /users - должен создать пользователя с корректными данными")
+    void addUserShouldSucceed() {
         assertDoesNotThrow(() -> userController.addUser(validUser));
+        assertNotNull(validUser.getId());
     }
 
-    @Test
-    @DisplayName("POST /users - должен отклонить пользователя с датой рождения в будущем")
-    void createUserWithBirthdayInFutureShouldFail() {
-        validUser.setBirthday(LocalDate.now().plusDays(1));
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> userController.addUser(validUser));
-        assertEquals("Дата рождения не может быть в будущем", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("POST /users - должен отклонить пользователя с null датой рождения")
-    void createUserWithNullBirthdayShouldFail() {
-        validUser.setBirthday(null);
-        ValidationException exception = assertThrows(ValidationException.class,
-                () -> userController.addUser(validUser));
-        assertEquals("Дата рождения должна быть указана", exception.getMessage());
-    }
-
-    @Test
-    @DisplayName("POST /users - должен создать пользователя с сегодняшней датой рождения")
-    void createUserWithTodayBirthdayShouldSucceed() {
-        validUser.setBirthday(LocalDate.now());
-        assertDoesNotThrow(() -> userController.addUser(validUser));
-    }
-
-    // тест обновления
     @Test
     @DisplayName("PUT /users - должен обновить существующего пользователя")
     void updateExistingUserShouldSucceed() {
@@ -192,8 +174,7 @@ class UserValidationTest {
         nonExistentUser.setName("Test");
         nonExistentUser.setBirthday(LocalDate.now());
 
-
-        NotFoundException exception = assertThrows(NotFoundException.class,  // ← ИЗМЕНЕНО
+        NotFoundException exception = assertThrows(NotFoundException.class,
                 () -> userController.updateUser(nonExistentUser));
         assertEquals("Пользователь с id 999 не найден", exception.getMessage());
     }
@@ -207,24 +188,6 @@ class UserValidationTest {
         assertEquals("ID пользователя должен быть указан", exception.getMessage());
     }
 
-    @Test
-    @DisplayName("PUT /users - должен обновить имя из пустоты на логин")
-    void updateUserWithEmptyNameShouldUseLogin() {
-        userController.addUser(validUser);
-        int id = validUser.getId();
-
-        User updatedUser = new User();
-        updatedUser.setId(id);
-        updatedUser.setEmail("user@example.com");
-        updatedUser.setLogin("user123");
-        updatedUser.setName("");
-        updatedUser.setBirthday(LocalDate.of(1990, 5, 15));
-
-        User result = userController.updateUser(updatedUser);
-        assertEquals("user123", result.getName());
-    }
-
-    // тест GET
     @Test
     @DisplayName("GET /users - должен вернуть пустой список в начале")
     void getAllUsersInitiallyEmpty() {

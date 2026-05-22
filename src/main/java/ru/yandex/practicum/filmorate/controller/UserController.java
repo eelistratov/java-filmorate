@@ -2,63 +2,74 @@ package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.User;
-
-import java.util.*;
+import ru.yandex.practicum.filmorate.service.UserService;
+import java.util.List;
 
 @Slf4j
 @RestController
+@RequestMapping("/users")
 public class UserController {
-    private final Map<Integer, User> users = new HashMap<>();
-    private int nextId = 1;
+    private final UserService userService;
 
-    @GetMapping("/users")
+    @Autowired
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+
+    @GetMapping
     public List<User> getAllUsers() {
-        log.info("Получен запрос GET /users");
-        return new ArrayList<>(users.values());
+        log.info("GET /users");
+        return userService.getAllUsers();
     }
 
-    @PostMapping("/users")
+    @GetMapping("/{id}")
+    public User getUserById(@PathVariable Integer id) {
+        log.info("GET /users/{}", id);
+        return userService.getUserById(id);
+    }
+
+    @PostMapping
     public User addUser(@Valid @RequestBody User user) {
-        log.info("Получен запрос POST /users с телом: {}", user);
-
-        // Логика: если имя пустое — используем логин
-        if (user.getName() == null || user.getName().isBlank()) {
-            user.setName(user.getLogin());
-            log.debug("Имя пользователя пустое, установлено значение из логина: {}", user.getLogin());
-        }
-
-        user.setId(nextId++);
-        users.put(user.getId(), user);
-        log.info("Пользователь добавлен с id {}", user.getId());
-        return user;
+        log.info("POST /users - {}", user);
+        return userService.addUser(user);
     }
 
-    @PutMapping("/users")
+    @PutMapping
     public User updateUser(@Valid @RequestBody User user) {
-        log.info("Получен запрос PUT /users с телом: {}", user);
+        log.info("PUT /users - {}", user);
+        return userService.updateUser(user);
+    }
 
-        if (user.getId() == null || user.getId() <= 0) {
-            log.error("ID пользователя не указан или некорректен: {}", user.getId());
-            throw new ValidationException("ID пользователя должен быть указан");
-        }
+    @DeleteMapping("/{id}")
+    public void deleteUser(@PathVariable Integer id) {
+        log.info("DELETE /users/{}", id);
+        userService.deleteUser(id);
+    }
 
-        if (!users.containsKey(user.getId())) {
-            log.error("Пользователь с id {} не найден", user.getId());
-            throw new NotFoundException("Пользователь с id " + user.getId() + " не найден");
-        }
+    @PutMapping("/{id}/friends/{friendId}")
+    public void addFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
+        log.info("PUT /users/{}/friends/{}", id, friendId);
+        userService.addFriend(id, friendId);
+    }
 
-        // Логика: если имя пустое — используем логин
-        if (user.getName() == null || user.getName().isBlank()) {
-            user.setName(user.getLogin());
-            log.debug("Имя пользователя пустое, установлено значение из логина: {}", user.getLogin());
-        }
+    @DeleteMapping("/{id}/friends/{friendId}")
+    public void removeFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
+        log.info("DELETE /users/{}/friends/{}", id, friendId);
+        userService.removeFriend(id, friendId);
+    }
 
-        users.put(user.getId(), user);
-        log.info("Пользователь с id {} обновлён", user.getId());
-        return user;
+    @GetMapping("/{id}/friends")
+    public List<User> getFriends(@PathVariable Integer id) {
+        log.info("GET /users/{}/friends", id);
+        return userService.getFriends(id);
+    }
+
+    @GetMapping("/{id}/friends/common/{otherId}")
+    public List<User> getCommonFriends(@PathVariable Integer id, @PathVariable Integer otherId) {
+        log.info("GET /users/{}/friends/common/{}", id, otherId);
+        return userService.getCommonFriends(id, otherId);
     }
 }

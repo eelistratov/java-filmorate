@@ -15,14 +15,14 @@ public class ErrorHandler {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public ErrorResponse handleValidation(ValidationException e) {
         log.error("Ошибка валидации: {}", e.getMessage());
-        return new ErrorResponse(e.getMessage());
+        return new ErrorResponse("Ошибка валидации", e.getMessage());
     }
 
     @ExceptionHandler(NotFoundException.class)
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public ErrorResponse handleNotFound(NotFoundException e) {
         log.error("Объект не найден: {}", e.getMessage());
-        return new ErrorResponse(e.getMessage());
+        return new ErrorResponse("Объект не найден", e.getMessage());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
@@ -35,13 +35,13 @@ public class ErrorHandler {
                 .map(error -> error.getDefaultMessage())
                 .orElse("Ошибка валидации");
         log.error("Ошибка валидации аннотаций: {}", errorMessage);
-        return new ErrorResponse(errorMessage);
+        return new ErrorResponse("Ошибка валидации", errorMessage);
     }
 
     @ExceptionHandler(Throwable.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public ErrorResponse handleThrowable(Throwable e) {
         log.error("Непредвиденная ошибка: {}", e.getMessage(), e);
-        return new ErrorResponse("Произошла внутренняя ошибка сервера");
+        return new ErrorResponse("Внутренняя ошибка сервера", "Произошла непредвиденная ошибка");
     }
 }

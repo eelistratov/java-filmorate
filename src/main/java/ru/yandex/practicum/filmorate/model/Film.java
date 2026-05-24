@@ -29,7 +29,6 @@ public class Film {
 
     private final Set<Integer> likes = new HashSet<>();
 
-    // Бизнес-методы
     public void addLike(Integer userId) {
         likes.add(userId);
     }

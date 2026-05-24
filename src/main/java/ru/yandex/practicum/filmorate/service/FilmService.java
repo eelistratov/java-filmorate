@@ -3,7 +3,6 @@ package ru.yandex.practicum.filmorate.service;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
@@ -16,7 +15,6 @@ import java.util.stream.Collectors;
 public class FilmService {
     private final FilmStorage filmStorage;
     private final UserStorage userStorage;
-
 
     public FilmService(FilmStorage filmStorage, UserStorage userStorage) {
         this.filmStorage = filmStorage;
@@ -38,9 +36,6 @@ public class FilmService {
     }
 
     public Film updateFilm(Film film) {
-        if (film.getId() == null) {
-            throw new ValidationException("ID фильма должен быть указан");
-        }
         return filmStorage.updateFilm(film);
     }
 
@@ -54,17 +49,16 @@ public class FilmService {
         }
 
         Film film = getFilmById(filmId);
-
-        if (film.isLikedByUser(userId)) {
-            log.warn("Пользователь {} уже поставил лайк фильму {}", userId, filmId);
-            return;
-        }
-
         film.addLike(userId);
         log.info("Пользователь {} поставил лайк фильму {}", userId, filmId);
     }
 
     public void removeLike(Integer filmId, Integer userId) {
+        // Проверка существования пользователя
+        if (!userStorage.userExists(userId)) {
+            throw new NotFoundException("Пользователь с id " + userId + " не найден");
+        }
+
         Film film = getFilmById(filmId);
 
         if (!film.isLikedByUser(userId)) {

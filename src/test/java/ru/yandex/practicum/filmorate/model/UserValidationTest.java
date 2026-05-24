@@ -10,6 +10,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.controller.UserController;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.service.UserService;
+import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Set;
@@ -21,6 +24,8 @@ class UserValidationTest {
 
     private static Validator validator;
     private UserController userController;
+    private UserService userService;
+    private UserStorage userStorage;
     private User validUser;
 
     @BeforeAll
@@ -32,7 +37,10 @@ class UserValidationTest {
 
     @BeforeEach
     void setUp() {
-        userController = new UserController();
+        userStorage = new InMemoryUserStorage();
+        userService = new UserService(userStorage);
+        userController = new UserController(userService);  // ← Передаём сервис
+
         validUser = new User();
         validUser.setEmail("user@example.com");
         validUser.setLogin("user123");
@@ -40,7 +48,7 @@ class UserValidationTest {
         validUser.setBirthday(LocalDate.of(1990, 5, 15));
     }
 
-    // новые тесты аннотации
+    // Все остальные тесты остаются без изменений
     @Test
     @DisplayName("Должен пройти валидацию с корректными данными")
     void validUserShouldPassValidation() {
@@ -110,7 +118,6 @@ class UserValidationTest {
         assertTrue(violations.isEmpty());
     }
 
-    // новые тесты логики имен
     @Test
     @DisplayName("Должен использовать логин вместо пустого имени")
     void emptyNameShouldUseLogin() {
@@ -143,7 +150,6 @@ class UserValidationTest {
         assertEquals("Ivan Ivanov", created.getName());
     }
 
-    // новые тесты контроллера
     @Test
     @DisplayName("POST /users - должен создать пользователя с корректными данными")
     void addUserShouldSucceed() {

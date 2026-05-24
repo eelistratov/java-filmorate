@@ -43,7 +43,7 @@ class FilmValidationTest {
         filmStorage = new InMemoryFilmStorage();
         userStorage = new InMemoryUserStorage();
         filmService = new FilmService(filmStorage, userStorage);
-        filmController = new FilmController(filmService);  // ← Передаём сервис
+        filmController = new FilmController(filmService);
 
         validFilm = new Film();
         validFilm.setName("Inception");
@@ -52,7 +52,6 @@ class FilmValidationTest {
         validFilm.setDuration(148);
     }
 
-    // Все остальные тесты остаются без изменений
     @Test
     @DisplayName("Должен пройти валидацию с корректными данными")
     void validFilmShouldPassValidation() {

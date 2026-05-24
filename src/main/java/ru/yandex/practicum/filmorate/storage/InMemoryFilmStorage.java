@@ -28,7 +28,7 @@ public class InMemoryFilmStorage implements FilmStorage {
 
     @Override
     public Film addFilm(Film film) {
-        film.setId(nextId++);
+        film.setId(nextId++);  // ✅ setId(Integer) - автоупаковка int в Integer
         films.put(film.getId(), film);
         log.debug("Фильм добавлен в хранилище с id {}", film.getId());
         return film;

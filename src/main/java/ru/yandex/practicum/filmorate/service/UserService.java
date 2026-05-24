@@ -1,11 +1,10 @@
 package ru.yandex.practicum.filmorate.service;
 
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
-import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.model.User;  // ← только один импорт
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 import java.util.List;
 import java.util.Set;
@@ -16,9 +15,9 @@ import java.util.stream.Collectors;
 public class UserService {
     private final UserStorage userStorage;
 
-    @Autowired
     public UserService(UserStorage userStorage) {
         this.userStorage = userStorage;
+        log.info("UserService инициализирован");
     }
 
     public List<User> getAllUsers() {
@@ -31,6 +30,9 @@ public class UserService {
     }
 
     public User addUser(User user) {
+        if (user.getName() == null || user.getName().isBlank()) {
+            user.setName(user.getLogin());
+        }
         return userStorage.addUser(user);
     }
 
@@ -38,6 +40,11 @@ public class UserService {
         if (user.getId() == null) {
             throw new ValidationException("ID пользователя должен быть указан");
         }
+
+        if (user.getName() == null || user.getName().isBlank()) {
+            user.setName(user.getLogin());
+        }
+
         return userStorage.updateUser(user);
     }
 
@@ -55,28 +62,20 @@ public class UserService {
 
         user.addFriend(friendId);
         friend.addFriend(userId);
-
-        log.info("Пользователь {} и {} стали друзьями", userId, friendId);
+        log.info("Пользователи {} и {} стали друзьями", userId, friendId);
     }
 
     public void removeFriend(Integer userId, Integer friendId) {
         User user = getUserById(userId);
         User friend = getUserById(friendId);
 
-        if (!user.isFriend(friendId)) {
-            log.warn("Пользователь {} не является другом {}", userId, friendId);
-            return;
-        }
-
         user.removeFriend(friendId);
         friend.removeFriend(userId);
-
-        log.info("Пользователь {} и {} больше не друзья", userId, friendId);
+        log.info("Пользователи {} и {} больше не друзья", userId, friendId);
     }
 
     public List<User> getFriends(Integer userId) {
         User user = getUserById(userId);
-
         return user.getFriends().stream()
                 .map(this::getUserById)
                 .collect(Collectors.toList());

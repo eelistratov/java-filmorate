@@ -4,8 +4,10 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.exception.ValidationException;
-import ru.yandex.practicum.filmorate.model.User;  // ← только один импорт
+import ru.yandex.practicum.filmorate.model.FriendshipStatus;
+import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
+
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -52,26 +54,40 @@ public class UserService {
         userStorage.deleteUser(id);
     }
 
+    // Дружба теперь ОДНОСТОРОННЯЯ
     public void addFriend(Integer userId, Integer friendId) {
         if (userId.equals(friendId)) {
             throw new ValidationException("Нельзя добавить самого себя в друзья");
         }
 
         User user = getUserById(userId);
-        User friend = getUserById(friendId);
+        getUserById(friendId); // Проверяем, что друг существует
 
-        user.addFriend(friendId);
-        friend.addFriend(userId);
-        log.info("Пользователи {} и {} стали друзьями", userId, friendId);
+        // Добавляем друга только в список друзей пользователя
+        user.addFriend(friendId, FriendshipStatus.UNCONFIRMED);
+
+        // Сохраняем обновления в БД
+        userStorage.updateUser(user);
+
+        log.info("Пользователь {} отправил заявку в друзья пользователю {}", userId, friendId);
+    }
+
+    public void confirmFriend(Integer userId, Integer friendId) {
+        User user = getUserById(userId);
+        getUserById(friendId); // Проверяем, что друг существует
+
+        // Подтверждаем дружбу
+        user.addFriend(friendId, FriendshipStatus.CONFIRMED);
+        userStorage.updateUser(user);
+
+        log.info("Пользователь {} подтвердил дружбу с {}", userId, friendId);
     }
 
     public void removeFriend(Integer userId, Integer friendId) {
         User user = getUserById(userId);
-        User friend = getUserById(friendId);
-
         user.removeFriend(friendId);
-        friend.removeFriend(userId);
-        log.info("Пользователи {} и {} больше не друзья", userId, friendId);
+        userStorage.updateUser(user);
+        log.info("Пользователь {} удалил из друзей {}", userId, friendId);
     }
 
     public List<User> getFriends(Integer userId) {

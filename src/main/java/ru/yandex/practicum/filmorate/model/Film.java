@@ -1,18 +1,16 @@
 package ru.yandex.practicum.filmorate.model;
+
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.Size;
-import lombok.Getter;
-import lombok.Setter;
-import java.time.LocalDate;
+import lombok.Data;
 import ru.yandex.practicum.filmorate.validation.ValidReleaseDate;
+import java.time.LocalDate;
+import java.util.HashSet;
+import java.util.Set;
 
-/**
- * Film.
- */
-@Getter
-@Setter
+@Data
 public class Film {
     private Integer id;
 
@@ -23,9 +21,27 @@ public class Film {
     private String description;
 
     @NotNull(message = "Дата релиза должна быть указана")
-    @ValidReleaseDate(message = "Дата релиза не может быть раньше 28 декабря 1895 года")
+    @ValidReleaseDate
     private LocalDate releaseDate;
 
     @Positive(message = "Продолжительность фильма должна быть положительной")
     private int duration;
+
+    private final Set<Integer> likes = new HashSet<>();
+
+    public void addLike(Integer userId) {
+        likes.add(userId);
+    }
+
+    public void removeLike(Integer userId) {
+        likes.remove(userId);
+    }
+
+    public boolean isLikedByUser(Integer userId) {
+        return likes.contains(userId);
+    }
+
+    public int getLikesCount() {
+        return likes.size();
+    }
 }

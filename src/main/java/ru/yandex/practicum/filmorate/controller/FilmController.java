@@ -2,51 +2,68 @@ package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.exception.NotFoundException;
-import ru.yandex.practicum.filmorate.exception.ValidationException;
 import ru.yandex.practicum.filmorate.model.Film;
-import java.util.*;
-import java.time.LocalDate;
+import ru.yandex.practicum.filmorate.service.FilmService;
+import java.util.List;
 
 @Slf4j
 @RestController
+@RequestMapping("/films")
 public class FilmController {
-    private final Map<Integer, Film> films = new HashMap<>();
-    private int nextId = 1;
-    private final LocalDate minReleaseDate = LocalDate.of(1895, 12, 28);
+    private final FilmService filmService;
 
-    @GetMapping("/films")
+    @Autowired
+    public FilmController(FilmService filmService) {
+        this.filmService = filmService;
+    }
+
+    @GetMapping
     public List<Film> getAllFilms() {
-        log.info("Получен запрос GET /films");
-        return new ArrayList<>(films.values());
+        log.info("GET /films");
+        return filmService.getAllFilms();
     }
 
-    @PostMapping("/films")
+    @GetMapping("/{id}")
+    public Film getFilmById(@PathVariable Integer id) {
+        log.info("GET /films/{}", id);
+        return filmService.getFilmById(id);
+    }
+
+    @PostMapping
     public Film addFilm(@Valid @RequestBody Film film) {
-        log.info("Получен запрос POST /films с телом: {}", film);
-        film.setId(nextId++);
-        films.put(film.getId(), film);
-        log.info("Фильм добавлен с id {}", film.getId());
-        return film;
+        log.info("POST /films - {}", film);
+        return filmService.addFilm(film);
     }
 
-    @PutMapping("/films")
+    @PutMapping
     public Film updateFilm(@Valid @RequestBody Film film) {
-        log.info("Получен запрос PUT /films с телом: {}", film);
+        log.info("PUT /films - {}", film);
+        return filmService.updateFilm(film);
+    }
 
-        if (film.getId() == null || film.getId() <= 0) {
-            log.error("ID фильма не указан или некорректен: {}", film.getId());
-            throw new ValidationException("ID фильма должен быть указан");
-        }
+    @DeleteMapping("/{id}")
+    public void deleteFilm(@PathVariable Integer id) {
+        log.info("DELETE /films/{}", id);
+        filmService.deleteFilm(id);
+    }
 
-        if (!films.containsKey(film.getId())) {
-            log.error("Фильм с id {} не найден", film.getId());
-            throw new NotFoundException("Фильм с id " + film.getId() + " не найден");
-        }
+    @PutMapping("/{id}/like/{userId}")
+    public void addLike(@PathVariable Integer id, @PathVariable Integer userId) {
+        log.info("PUT /films/{}/like/{}", id, userId);
+        filmService.addLike(id, userId);
+    }
 
-        films.put(film.getId(), film);
-        log.info("Фильм с id {} обновлён", film.getId());
-        return film;
+    @DeleteMapping("/{id}/like/{userId}")
+    public void removeLike(@PathVariable Integer id, @PathVariable Integer userId) {
+        log.info("DELETE /films/{}/like/{}", id, userId);
+        filmService.removeLike(id, userId);
+    }
+
+    @GetMapping("/popular")
+    public List<Film> getPopularFilms(@RequestParam(required = false) Integer count) {
+        log.info("GET /films/popular?count={}", count);
+        return filmService.getTopPopularFilms(count);
     }
 }

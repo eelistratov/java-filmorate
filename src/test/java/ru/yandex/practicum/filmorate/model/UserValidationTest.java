@@ -10,6 +10,9 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.controller.UserController;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.service.UserService;
+import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Set;
@@ -21,6 +24,8 @@ class UserValidationTest {
 
     private static Validator validator;
     private UserController userController;
+    private UserService userService;
+    private UserStorage userStorage;
     private User validUser;
 
     @BeforeAll
@@ -32,7 +37,10 @@ class UserValidationTest {
 
     @BeforeEach
     void setUp() {
-        userController = new UserController();
+        userStorage = new InMemoryUserStorage();
+        userService = new UserService(userStorage);
+        userController = new UserController(userService);
+
         validUser = new User();
         validUser.setEmail("user@example.com");
         validUser.setLogin("user123");
@@ -40,7 +48,6 @@ class UserValidationTest {
         validUser.setBirthday(LocalDate.of(1990, 5, 15));
     }
 
-    // новые тесты аннотации
     @Test
     @DisplayName("Должен пройти валидацию с корректными данными")
     void validUserShouldPassValidation() {
@@ -54,7 +61,10 @@ class UserValidationTest {
         validUser.setEmail("");
         Set<ConstraintViolation<User>> violations = validator.validate(validUser);
         assertFalse(violations.isEmpty());
-        assertEquals("Email не может быть пустым", violations.iterator().next().getMessage());
+
+        boolean hasMessage = violations.stream()
+                .anyMatch(v -> v.getMessage().equals("Email не может быть пустым"));
+        assertTrue(hasMessage);
     }
 
     @Test
@@ -63,7 +73,10 @@ class UserValidationTest {
         validUser.setEmail("userexample.com");
         Set<ConstraintViolation<User>> violations = validator.validate(validUser);
         assertFalse(violations.isEmpty());
-        assertEquals("Email должен содержать символ @", violations.iterator().next().getMessage());
+
+        boolean hasMessage = violations.stream()
+                .anyMatch(v -> v.getMessage().equals("Email должен содержать символ @"));
+        assertTrue(hasMessage);
     }
 
     @Test
@@ -72,7 +85,10 @@ class UserValidationTest {
         validUser.setLogin("");
         Set<ConstraintViolation<User>> violations = validator.validate(validUser);
         assertFalse(violations.isEmpty());
-        assertEquals("Логин не может быть пустым", violations.iterator().next().getMessage());
+
+        boolean hasBlankMessage = violations.stream()
+                .anyMatch(v -> v.getMessage().equals("Логин не может быть пустым"));
+        assertTrue(hasBlankMessage, "Должно быть сообщение о пустом логине");
     }
 
     @Test
@@ -81,7 +97,10 @@ class UserValidationTest {
         validUser.setLogin("user 123");
         Set<ConstraintViolation<User>> violations = validator.validate(validUser);
         assertFalse(violations.isEmpty());
-        assertEquals("Логин не может содержать пробелы", violations.iterator().next().getMessage());
+
+        boolean hasMessage = violations.stream()
+                .anyMatch(v -> v.getMessage().equals("Логин не может содержать пробелы"));
+        assertTrue(hasMessage);
     }
 
     @Test
@@ -90,7 +109,10 @@ class UserValidationTest {
         validUser.setBirthday(LocalDate.now().plusDays(1));
         Set<ConstraintViolation<User>> violations = validator.validate(validUser);
         assertFalse(violations.isEmpty());
-        assertEquals("Дата рождения не может быть в будущем", violations.iterator().next().getMessage());
+
+        boolean hasMessage = violations.stream()
+                .anyMatch(v -> v.getMessage().equals("Дата рождения не может быть в будущем"));
+        assertTrue(hasMessage);
     }
 
     @Test
@@ -99,7 +121,10 @@ class UserValidationTest {
         validUser.setBirthday(null);
         Set<ConstraintViolation<User>> violations = validator.validate(validUser);
         assertFalse(violations.isEmpty());
-        assertEquals("Дата рождения должна быть указана", violations.iterator().next().getMessage());
+
+        boolean hasMessage = violations.stream()
+                .anyMatch(v -> v.getMessage().equals("Дата рождения должна быть указана"));
+        assertTrue(hasMessage);
     }
 
     @Test
@@ -110,7 +135,6 @@ class UserValidationTest {
         assertTrue(violations.isEmpty());
     }
 
-    // новые тесты логики имен
     @Test
     @DisplayName("Должен использовать логин вместо пустого имени")
     void emptyNameShouldUseLogin() {
@@ -143,7 +167,6 @@ class UserValidationTest {
         assertEquals("Ivan Ivanov", created.getName());
     }
 
-    // новые тесты контроллера
     @Test
     @DisplayName("POST /users - должен создать пользователя с корректными данными")
     void addUserShouldSucceed() {

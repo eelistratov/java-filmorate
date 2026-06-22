@@ -10,6 +10,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
+import ru.yandex.practicum.filmorate.service.FilmService;
+import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
+import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
 import java.util.Set;
@@ -21,6 +26,9 @@ class FilmValidationTest {
 
     private static Validator validator;
     private FilmController filmController;
+    private FilmService filmService;
+    private FilmStorage filmStorage;
+    private UserStorage userStorage;
     private Film validFilm;
 
     @BeforeAll
@@ -32,7 +40,11 @@ class FilmValidationTest {
 
     @BeforeEach
     void setUp() {
-        filmController = new FilmController();
+        filmStorage = new InMemoryFilmStorage();
+        userStorage = new InMemoryUserStorage();
+        filmService = new FilmService(filmStorage, userStorage);
+        filmController = new FilmController(filmService);
+
         validFilm = new Film();
         validFilm.setName("Inception");
         validFilm.setDescription("A mind-bending thriller");
@@ -40,7 +52,6 @@ class FilmValidationTest {
         validFilm.setDuration(148);
     }
 
-    // новые тесты аннотации
     @Test
     @DisplayName("Должен пройти валидацию с корректными данными")
     void validFilmShouldPassValidation() {
@@ -152,7 +163,6 @@ class FilmValidationTest {
         assertEquals("Продолжительность фильма должна быть положительной", violations.iterator().next().getMessage());
     }
 
-    // новые тесты контроллера
     @Test
     @DisplayName("POST /films - должен создать фильм с корректными данными")
     void addFilmShouldSucceed() {

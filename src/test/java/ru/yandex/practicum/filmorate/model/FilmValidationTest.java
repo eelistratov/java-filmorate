@@ -42,21 +42,27 @@ class FilmValidationTest {
             public List<Film> getAllFilms() {
                 return new ArrayList<>();
             }
+
             @Override
             public Optional<Film> getFilmById(Integer id) {
                 return Optional.empty();
             }
+
             @Override
             public Film addFilm(Film film) {
                 film.setId(1);
                 return film;
             }
+
             @Override
             public Film updateFilm(Film film) {
                 return film;
             }
+
             @Override
-            public void deleteFilm(Integer id) {}
+            public void deleteFilm(Integer id) {
+            }
+
             @Override
             public boolean filmExists(Integer id) {
                 return false;
@@ -68,27 +74,32 @@ class FilmValidationTest {
             public List<User> getAllUsers() {
                 return new ArrayList<>();
             }
+
             @Override
             public Optional<User> getUserById(Integer id) {
                 return Optional.empty();
             }
+
             @Override
             public User addUser(User user) {
                 return user;
             }
+
             @Override
             public User updateUser(User user) {
                 return user;
             }
+
             @Override
-            public void deleteUser(Integer id) {}
+            public void deleteUser(Integer id) {
+            }
+
             @Override
             public boolean userExists(Integer id) {
                 return false;
             }
         };
 
-        // Используем конструктор с 2 параметрами
         FilmService filmService = new FilmService(filmStorage, userStorage);
         filmController = new FilmController(filmService);
 

@@ -86,7 +86,16 @@ public class UserDbStorage implements UserStorage {
         }
 
         log.debug("Пользователь с id {} обновлён", user.getId());
+        updateFriends(user);
         return user;
+    }
+
+    private void updateFriends(User user) {
+        jdbcTemplate.update("DELETE FROM friendship WHERE user_id = ?", user.getId());
+        for (Integer friendId : user.getFriends()) {
+            jdbcTemplate.update("INSERT INTO friendship (user_id, friend_id) VALUES (?, ?)",
+                    user.getId(), friendId);
+        }
     }
 
     @Override

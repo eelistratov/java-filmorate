@@ -168,7 +168,17 @@ public class FilmDbStorage implements FilmStorage {
         updateFilmGenres(film);
 
         log.debug("Фильм с id {} обновлён", film.getId());
+
+        updateLikes(film);
         return film;
+    }
+
+    private void updateLikes(Film film) {
+        jdbcTemplate.update("DELETE FROM likes WHERE film_id = ?", film.getId());
+        for (Integer userId : film.getLikes()) {
+            jdbcTemplate.update("INSERT INTO likes (film_id, user_id) VALUES (?, ?)",
+                    film.getId(), userId);
+        }
     }
 
     @Override

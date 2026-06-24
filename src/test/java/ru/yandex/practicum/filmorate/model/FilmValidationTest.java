@@ -11,13 +11,10 @@ import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.service.FilmService;
-import ru.yandex.practicum.filmorate.storage.FilmStorage;
-import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
-import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
+import ru.yandex.practicum.filmorate.storage.*;
 
 import java.time.LocalDate;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -26,9 +23,6 @@ class FilmValidationTest {
 
     private static Validator validator;
     private FilmController filmController;
-    private FilmService filmService;
-    private FilmStorage filmStorage;
-    private UserStorage userStorage;
     private Film validFilm;
 
     @BeforeAll
@@ -40,9 +34,24 @@ class FilmValidationTest {
 
     @BeforeEach
     void setUp() {
-        filmStorage = new InMemoryFilmStorage();
-        userStorage = new InMemoryUserStorage();
-        filmService = new FilmService(filmStorage, userStorage);
+        // Создаём реальные хранилища
+        FilmStorage filmStorage = new InMemoryFilmStorage();
+        UserStorage userStorage = new InMemoryUserStorage();
+
+        // Создаём заглушки для MPA и Genre (не используются в тестах валидации)
+        MpaRatingStorage mpaStorage = new MpaRatingStorage() {
+            @Override public List<MpaRating> getAllMpaRatings() { return new ArrayList<>(); }
+            @Override public Optional<MpaRating> getMpaRatingById(Integer id) { return Optional.empty(); }
+            @Override public boolean mpaExists(Integer id) { return false; }
+        };
+
+        GenreStorage genreStorage = new GenreStorage() {
+            @Override public List<Genre> getAllGenres() { return new ArrayList<>(); }
+            @Override public Optional<Genre> getGenreById(Integer id) { return Optional.empty(); }
+            @Override public boolean genreExists(Integer id) { return false; }
+        };
+
+        FilmService filmService = new FilmService(filmStorage, userStorage, mpaStorage, genreStorage);
         filmController = new FilmController(filmService);
 
         validFilm = new Film();

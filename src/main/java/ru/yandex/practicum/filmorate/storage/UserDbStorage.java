@@ -34,6 +34,7 @@ public class UserDbStorage implements UserStorage {
             user.setLogin(rs.getString("login"));
             user.setName(rs.getString("user_name"));
             user.setBirthday(rs.getDate("birthday").toLocalDate());
+            loadFriends(user);
             return user;
         }
     };
@@ -66,6 +67,7 @@ public class UserDbStorage implements UserStorage {
         }, keyHolder);
 
         user.setId(Objects.requireNonNull(keyHolder.getKey()).intValue());
+        updateFriends(user);
         log.debug("Пользователь добавлен с id {}", user.getId());
         return user;
     }
@@ -85,17 +87,9 @@ public class UserDbStorage implements UserStorage {
             throw new NotFoundException("Пользователь с id " + user.getId() + " не найден");
         }
 
-        log.debug("Пользователь с id {} обновлён", user.getId());
         updateFriends(user);
+        log.debug("Пользователь с id {} обновлён", user.getId());
         return user;
-    }
-
-    private void updateFriends(User user) {
-        jdbcTemplate.update("DELETE FROM friendship WHERE user_id = ?", user.getId());
-        for (Integer friendId : user.getFriends()) {
-            jdbcTemplate.update("INSERT INTO friendship (user_id, friend_id) VALUES (?, ?)",
-                    user.getId(), friendId);
-        }
     }
 
     @Override
@@ -113,5 +107,23 @@ public class UserDbStorage implements UserStorage {
         String sql = "SELECT COUNT(*) FROM users WHERE user_id = ?";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
         return count != null && count > 0;
+    }
+
+    private void loadFriends(User user) {
+        String sql = "SELECT friend_id FROM friendship WHERE user_id = ?";
+        List<Integer> friendIds = jdbcTemplate.queryForList(sql, Integer.class, user.getId());
+        friendIds.forEach(user::addFriend);
+    }
+
+    private void updateFriends(User user) {
+        String deleteSql = "DELETE FROM friendship WHERE user_id = ?";
+        jdbcTemplate.update(deleteSql, user.getId());
+
+        if (user.getFriends() != null && !user.getFriends().isEmpty()) {
+            String sql = "INSERT INTO friendship (user_id, friend_id) VALUES (?, ?)";
+            for (Integer friendId : user.getFriends()) {
+                jdbcTemplate.update(sql, user.getId(), friendId);
+            }
+        }
     }
 }

@@ -52,11 +52,11 @@ public class UserController {
         userService.addFriend(id, friendId);
     }
 
-    @PutMapping("/{id}/friends/{friendId}/confirm")
-    public void confirmFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
-        log.info("PUT /users/{}/friends/{}/confirm", id, friendId);
-        userService.confirmFriend(id, friendId);
-    }
+    // УДАЛИТЬ ЭТОТ МЕТОД (если он есть):
+    // @PutMapping("/{id}/friends/{friendId}/confirm")
+    // public void confirmFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
+    //     userService.confirmFriend(id, friendId);
+    // }
 
     @DeleteMapping("/{id}/friends/{friendId}")
     public void removeFriend(@PathVariable Integer id, @PathVariable Integer friendId) {

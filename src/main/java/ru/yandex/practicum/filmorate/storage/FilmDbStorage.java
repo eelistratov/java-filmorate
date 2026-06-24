@@ -25,8 +25,6 @@ import java.util.*;
 @RequiredArgsConstructor
 public class FilmDbStorage implements FilmStorage {
     private final JdbcTemplate jdbcTemplate;
-
-    // Вспомогательные хранилища для проверки существования
     private final MpaRatingStorage mpaRatingStorage;
     private final GenreStorage genreStorage;
 
@@ -49,6 +47,7 @@ public class FilmDbStorage implements FilmStorage {
                 film.setMpa(mpa);
             }
 
+            loadLikes(film);
             return film;
         }
     };
@@ -91,14 +90,12 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film addFilm(Film film) {
-        // Проверка MPA
         if (film.getMpa() != null && film.getMpa().getId() != null) {
             if (!mpaRatingStorage.mpaExists(film.getMpa().getId())) {
                 throw new NotFoundException("Рейтинг MPA с id " + film.getMpa().getId() + " не найден");
             }
         }
 
-        // Проверка жанров
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             for (Genre genre : film.getGenres()) {
                 if (genre.getId() != null && !genreStorage.genreExists(genre.getId())) {
@@ -124,21 +121,22 @@ public class FilmDbStorage implements FilmStorage {
         }, keyHolder);
 
         film.setId(Objects.requireNonNull(keyHolder.getKey()).intValue());
+
         saveFilmGenres(film);
+        updateLikes(film);
+
         log.debug("Фильм добавлен с id {}", film.getId());
         return film;
     }
 
     @Override
     public Film updateFilm(Film film) {
-        // Проверка MPA
         if (film.getMpa() != null && film.getMpa().getId() != null) {
             if (!mpaRatingStorage.mpaExists(film.getMpa().getId())) {
                 throw new NotFoundException("Рейтинг MPA с id " + film.getMpa().getId() + " не найден");
             }
         }
 
-        // Проверка жанров
         if (film.getGenres() != null && !film.getGenres().isEmpty()) {
             for (Genre genre : film.getGenres()) {
                 if (genre.getId() != null && !genreStorage.genreExists(genre.getId())) {
@@ -166,19 +164,10 @@ public class FilmDbStorage implements FilmStorage {
         }
 
         updateFilmGenres(film);
+        updateLikes(film);
 
         log.debug("Фильм с id {} обновлён", film.getId());
-
-        updateLikes(film);
         return film;
-    }
-
-    private void updateLikes(Film film) {
-        jdbcTemplate.update("DELETE FROM likes WHERE film_id = ?", film.getId());
-        for (Integer userId : film.getLikes()) {
-            jdbcTemplate.update("INSERT INTO likes (film_id, user_id) VALUES (?, ?)",
-                    film.getId(), userId);
-        }
     }
 
     @Override
@@ -196,6 +185,24 @@ public class FilmDbStorage implements FilmStorage {
         String sql = "SELECT COUNT(*) FROM films WHERE film_id = ?";
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
         return count != null && count > 0;
+    }
+
+    private void loadLikes(Film film) {
+        String sql = "SELECT user_id FROM likes WHERE film_id = ?";
+        List<Integer> userIds = jdbcTemplate.queryForList(sql, Integer.class, film.getId());
+        userIds.forEach(film::addLike);
+    }
+
+    private void updateLikes(Film film) {
+        String deleteSql = "DELETE FROM likes WHERE film_id = ?";
+        jdbcTemplate.update(deleteSql, film.getId());
+
+        if (film.getLikes() != null && !film.getLikes().isEmpty()) {
+            String sql = "INSERT INTO likes (film_id, user_id) VALUES (?, ?)";
+            for (Integer userId : film.getLikes()) {
+                jdbcTemplate.update(sql, film.getId(), userId);
+            }
+        }
     }
 
     private Set<Genre> getGenresByFilmId(Integer filmId) {

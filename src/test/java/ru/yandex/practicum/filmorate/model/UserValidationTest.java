@@ -11,9 +11,10 @@ import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.controller.UserController;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.service.UserService;
-import ru.yandex.practicum.filmorate.storage.*;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -36,20 +37,36 @@ class UserValidationTest {
 
     @BeforeEach
     void setUp() {
-        // Используем заглушки вместо InMemory хранилищ
         UserStorage userStorage = new UserStorage() {
             @Override
-            public List<User> getAllUsers() { return List.of(); }
+            public List<User> getAllUsers() {
+                return new ArrayList<>();
+            }
+
             @Override
-            public Optional<User> getUserById(Integer id) { return Optional.empty(); }
+            public Optional<User> getUserById(Integer id) {
+                return Optional.empty();
+            }
+
             @Override
-            public User addUser(User user) { user.setId(1); return user; }
+            public User addUser(User user) {
+                user.setId(1);
+                return user;
+            }
+
             @Override
-            public User updateUser(User user) { return user; }
+            public User updateUser(User user) {
+                return user;
+            }
+
             @Override
-            public void deleteUser(Integer id) {}
+            public void deleteUser(Integer id) {
+            }
+
             @Override
-            public boolean userExists(Integer id) { return false; }
+            public boolean userExists(Integer id) {
+                return false;
+            }
         };
 
         UserService userService = new UserService(userStorage);
@@ -62,7 +79,6 @@ class UserValidationTest {
         validUser.setBirthday(LocalDate.of(1990, 5, 15));
     }
 
-    // Все тесты остаются без изменений
     @Test
     @DisplayName("Должен пройти валидацию с корректными данными")
     void validUserShouldPassValidation() {

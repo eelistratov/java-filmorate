@@ -11,12 +11,10 @@ import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.service.FilmService;
-import ru.yandex.practicum.filmorate.storage.*;
+import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
+import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
 
 import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -37,44 +35,10 @@ class FilmValidationTest {
 
     @BeforeEach
     void setUp() {
-        FilmStorage filmStorage = new InMemoryFilmStorage();
-        UserStorage userStorage = new InMemoryUserStorage();
-
-        MpaRatingStorage mpaStorage = new MpaRatingStorage() {
-            @Override
-            public List<MpaRating> getAllMpaRatings() {
-                return new ArrayList<>();
-            }
-
-            @Override
-            public Optional<MpaRating> getMpaRatingById(Integer id) {
-                return Optional.empty();
-            }
-
-            @Override
-            public boolean mpaExists(Integer id) {
-                return false;
-            }
-        };
-
-        GenreStorage genreStorage = new GenreStorage() {
-            @Override
-            public List<Genre> getAllGenres() {
-                return new ArrayList<>();
-            }
-
-            @Override
-            public Optional<Genre> getGenreById(Integer id) {
-                return Optional.empty();
-            }
-
-            @Override
-            public boolean genreExists(Integer id) {
-                return false;
-            }
-        };
-
-        FilmService filmService = new FilmService(filmStorage, userStorage, mpaStorage, genreStorage);
+        FilmService filmService = new FilmService(
+                new InMemoryFilmStorage(),
+                new InMemoryUserStorage()
+        );
         filmController = new FilmController(filmService);
 
         validFilm = new Film();

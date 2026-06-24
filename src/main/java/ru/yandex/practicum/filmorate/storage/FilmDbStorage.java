@@ -26,6 +26,10 @@ import java.util.*;
 public class FilmDbStorage implements FilmStorage {
     private final JdbcTemplate jdbcTemplate;
 
+    // Вспомогательные хранилища для проверки существования
+    private final MpaRatingStorage mpaRatingStorage;
+    private final GenreStorage genreStorage;
+
     private final RowMapper<Film> filmRowMapper = new RowMapper<Film>() {
         @Override
         public Film mapRow(ResultSet rs, int rowNum) throws SQLException {
@@ -36,7 +40,6 @@ public class FilmDbStorage implements FilmStorage {
             film.setReleaseDate(rs.getDate("release_date").toLocalDate());
             film.setDuration(rs.getInt("duration"));
 
-            // Загружаем MPA из JOIN
             int mpaId = rs.getInt("mpa_id");
             if (mpaId != 0) {
                 MpaRating mpa = new MpaRating();
@@ -52,7 +55,6 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public List<Film> getAllFilms() {
-        // JOIN с mpa_ratings для получения всех данных одним запросом
         String sql = "SELECT f.*, " +
                 "m.mpa_id, m.mpa_name, m.description AS mpa_description " +
                 "FROM films f " +
@@ -61,7 +63,6 @@ public class FilmDbStorage implements FilmStorage {
 
         List<Film> films = jdbcTemplate.query(sql, filmRowMapper);
 
-        // Загружаем жанры для каждого фильма отдельно (можно оптимизировать, но для простоты оставляем)
         for (Film film : films) {
             Set<Genre> genres = getGenresByFilmId(film.getId());
             film.setGenres(genres);
@@ -80,7 +81,6 @@ public class FilmDbStorage implements FilmStorage {
 
         List<Film> films = jdbcTemplate.query(sql, filmRowMapper, id);
 
-        // Загружаем жанры для найденного фильма
         films.forEach(film -> {
             Set<Genre> genres = getGenresByFilmId(film.getId());
             film.setGenres(genres);
@@ -91,6 +91,22 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film addFilm(Film film) {
+        // Проверка MPA
+        if (film.getMpa() != null && film.getMpa().getId() != null) {
+            if (!mpaRatingStorage.mpaExists(film.getMpa().getId())) {
+                throw new NotFoundException("Рейтинг MPA с id " + film.getMpa().getId() + " не найден");
+            }
+        }
+
+        // Проверка жанров
+        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
+            for (Genre genre : film.getGenres()) {
+                if (genre.getId() != null && !genreStorage.genreExists(genre.getId())) {
+                    throw new NotFoundException("Жанр с id " + genre.getId() + " не найден");
+                }
+            }
+        }
+
         String sql = "INSERT INTO films (film_name, description, release_date, duration, mpa_rating_id) " +
                 "VALUES (?, ?, ?, ?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
@@ -115,6 +131,22 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film updateFilm(Film film) {
+        // Проверка MPA
+        if (film.getMpa() != null && film.getMpa().getId() != null) {
+            if (!mpaRatingStorage.mpaExists(film.getMpa().getId())) {
+                throw new NotFoundException("Рейтинг MPA с id " + film.getMpa().getId() + " не найден");
+            }
+        }
+
+        // Проверка жанров
+        if (film.getGenres() != null && !film.getGenres().isEmpty()) {
+            for (Genre genre : film.getGenres()) {
+                if (genre.getId() != null && !genreStorage.genreExists(genre.getId())) {
+                    throw new NotFoundException("Жанр с id " + genre.getId() + " не найден");
+                }
+            }
+        }
+
         String sql = "UPDATE films SET film_name = ?, description = ?, release_date = ?, duration = ?, mpa_rating_id = ? " +
                 "WHERE film_id = ?";
 
@@ -171,10 +203,6 @@ public class FilmDbStorage implements FilmStorage {
         return new HashSet<>(genreList);
     }
 
-    /**
-     * Сохраняет жанры фильма с использованием пакетной вставки (batchUpdate)
-     * для повышения производительности.
-     */
     private void saveFilmGenres(Film film) {
         if (film.getGenres() == null || film.getGenres().isEmpty()) {
             return;

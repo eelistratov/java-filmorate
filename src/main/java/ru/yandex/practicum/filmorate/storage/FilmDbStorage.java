@@ -17,7 +17,6 @@ import ru.yandex.practicum.filmorate.model.MpaRating;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.*;
 
 @Slf4j

@@ -37,35 +37,50 @@ class UserValidationTest {
 
     @BeforeEach
     void setUp() {
+        List<User> userStorageList = new ArrayList<>();
         UserStorage userStorage = new UserStorage() {
             @Override
             public List<User> getAllUsers() {
-                return new ArrayList<>();
+                return new ArrayList<>(userStorageList);
             }
 
             @Override
             public Optional<User> getUserById(Integer id) {
-                return Optional.empty();
+                return userStorageList.stream()
+                        .filter(u -> u.getId().equals(id))
+                        .findFirst();
             }
 
             @Override
             public User addUser(User user) {
-                user.setId(1);
+                user.setId(userStorageList.size() + 1);
+                userStorageList.add(user);
                 return user;
             }
 
             @Override
             public User updateUser(User user) {
-                return user;
+                return userStorageList.stream()
+                        .filter(u -> u.getId().equals(user.getId()))
+                        .findFirst()
+                        .map(u -> {
+                            u.setEmail(user.getEmail());
+                            u.setLogin(user.getLogin());
+                            u.setName(user.getName());
+                            u.setBirthday(user.getBirthday());
+                            return u;
+                        })
+                        .orElseThrow(() -> new NotFoundException("Пользователь с id " + user.getId() + " не найден"));
             }
 
             @Override
             public void deleteUser(Integer id) {
+                userStorageList.removeIf(u -> u.getId().equals(id));
             }
 
             @Override
             public boolean userExists(Integer id) {
-                return false;
+                return userStorageList.stream().anyMatch(u -> u.getId().equals(id));
             }
         };
 

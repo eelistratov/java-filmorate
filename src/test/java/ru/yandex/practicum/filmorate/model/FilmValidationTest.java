@@ -11,7 +11,8 @@ import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.service.FilmService;
-import ru.yandex.practicum.filmorate.storage.*;
+import ru.yandex.practicum.filmorate.storage.FilmStorage;
+import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -37,35 +38,50 @@ class FilmValidationTest {
 
     @BeforeEach
     void setUp() {
+        List<Film> filmStorageList = new ArrayList<>();
         FilmStorage filmStorage = new FilmStorage() {
             @Override
             public List<Film> getAllFilms() {
-                return new ArrayList<>();
+                return new ArrayList<>(filmStorageList);
             }
 
             @Override
             public Optional<Film> getFilmById(Integer id) {
-                return Optional.empty();
+                return filmStorageList.stream()
+                        .filter(f -> f.getId().equals(id))
+                        .findFirst();
             }
 
             @Override
             public Film addFilm(Film film) {
-                film.setId(1);
+                film.setId(filmStorageList.size() + 1);
+                filmStorageList.add(film);
                 return film;
             }
 
             @Override
             public Film updateFilm(Film film) {
-                return film;
+                return filmStorageList.stream()
+                        .filter(f -> f.getId().equals(film.getId()))
+                        .findFirst()
+                        .map(f -> {
+                            f.setName(film.getName());
+                            f.setDescription(film.getDescription());
+                            f.setReleaseDate(film.getReleaseDate());
+                            f.setDuration(film.getDuration());
+                            return f;
+                        })
+                        .orElseThrow(() -> new NotFoundException("Фильм с id " + film.getId() + " не найден"));
             }
 
             @Override
             public void deleteFilm(Integer id) {
+                filmStorageList.removeIf(f -> f.getId().equals(id));
             }
 
             @Override
             public boolean filmExists(Integer id) {
-                return false;
+                return filmStorageList.stream().anyMatch(f -> f.getId().equals(id));
             }
         };
 

@@ -11,10 +11,12 @@ import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.controller.UserController;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.service.UserService;
-import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,8 +26,6 @@ class UserValidationTest {
 
     private static Validator validator;
     private UserController userController;
-    private UserService userService;
-    private UserStorage userStorage;
     private User validUser;
 
     @BeforeAll
@@ -37,8 +37,54 @@ class UserValidationTest {
 
     @BeforeEach
     void setUp() {
-        userStorage = new InMemoryUserStorage();
-        userService = new UserService(userStorage);
+        List<User> userStorageList = new ArrayList<>();
+        UserStorage userStorage = new UserStorage() {
+            @Override
+            public List<User> getAllUsers() {
+                return new ArrayList<>(userStorageList);
+            }
+
+            @Override
+            public Optional<User> getUserById(Integer id) {
+                return userStorageList.stream()
+                        .filter(u -> u.getId().equals(id))
+                        .findFirst();
+            }
+
+            @Override
+            public User addUser(User user) {
+                user.setId(userStorageList.size() + 1);
+                userStorageList.add(user);
+                return user;
+            }
+
+            @Override
+            public User updateUser(User user) {
+                return userStorageList.stream()
+                        .filter(u -> u.getId().equals(user.getId()))
+                        .findFirst()
+                        .map(u -> {
+                            u.setEmail(user.getEmail());
+                            u.setLogin(user.getLogin());
+                            u.setName(user.getName());
+                            u.setBirthday(user.getBirthday());
+                            return u;
+                        })
+                        .orElseThrow(() -> new NotFoundException("Пользователь с id " + user.getId() + " не найден"));
+            }
+
+            @Override
+            public void deleteUser(Integer id) {
+                userStorageList.removeIf(u -> u.getId().equals(id));
+            }
+
+            @Override
+            public boolean userExists(Integer id) {
+                return userStorageList.stream().anyMatch(u -> u.getId().equals(id));
+            }
+        };
+
+        UserService userService = new UserService(userStorage);
         userController = new UserController(userService);
 
         validUser = new User();
@@ -88,7 +134,7 @@ class UserValidationTest {
 
         boolean hasBlankMessage = violations.stream()
                 .anyMatch(v -> v.getMessage().equals("Логин не может быть пустым"));
-        assertTrue(hasBlankMessage, "Должно быть сообщение о пустом логине");
+        assertTrue(hasBlankMessage);
     }
 
     @Test

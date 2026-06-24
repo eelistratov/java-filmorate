@@ -1,21 +1,20 @@
 package ru.yandex.practicum.filmorate.controller;
 
 import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.web.bind.annotation.*;
-import ru.yandex.practicum.filmorate.model.User;  // ← Этот импорт критически важен!
+import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.service.UserService;
+
 import java.util.List;
 
 @Slf4j
 @RestController
 @RequestMapping("/users")
+@RequiredArgsConstructor
 public class UserController {
     private final UserService userService;
-
-    public UserController(UserService userService) {
-        this.userService = userService;
-    }
 
     @GetMapping
     public List<User> getAllUsers() {
@@ -52,6 +51,12 @@ public class UserController {
         log.info("PUT /users/{}/friends/{}", id, friendId);
         userService.addFriend(id, friendId);
     }
+
+    // УДАЛИТЬ ЭТОТ МЕТОД (если он есть):
+    // @PutMapping("/{id}/friends/{friendId}/confirm")
+    // public void confirmFriend(@PathVariable Integer id, @PathVariable Integer friendId) {
+    //     userService.confirmFriend(id, friendId);
+    // }
 
     @DeleteMapping("/{id}/friends/{friendId}")
     public void removeFriend(@PathVariable Integer id, @PathVariable Integer friendId) {

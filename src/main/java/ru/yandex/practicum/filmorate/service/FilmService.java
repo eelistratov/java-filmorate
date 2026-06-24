@@ -6,6 +6,7 @@ import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.storage.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.UserStorage;
+
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -36,6 +37,9 @@ public class FilmService {
     }
 
     public Film updateFilm(Film film) {
+        if (film.getId() == null) {
+            throw new NotFoundException("ID фильма должен быть указан");
+        }
         return filmStorage.updateFilm(film);
     }
 
@@ -50,11 +54,11 @@ public class FilmService {
 
         Film film = getFilmById(filmId);
         film.addLike(userId);
+        filmStorage.updateFilm(film);
         log.info("Пользователь {} поставил лайк фильму {}", userId, filmId);
     }
 
     public void removeLike(Integer filmId, Integer userId) {
-        // Проверка существования пользователя
         if (!userStorage.userExists(userId)) {
             throw new NotFoundException("Пользователь с id " + userId + " не найден");
         }
@@ -67,6 +71,7 @@ public class FilmService {
         }
 
         film.removeLike(userId);
+        filmStorage.updateFilm(film);
         log.info("Пользователь {} удалил лайк у фильма {}", userId, filmId);
     }
 

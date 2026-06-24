@@ -54,7 +54,6 @@ public class UserService {
         userStorage.deleteUser(id);
     }
 
-    // Дружба теперь ОДНОСТОРОННЯЯ
     public void addFriend(Integer userId, Integer friendId) {
         if (userId.equals(friendId)) {
             throw new ValidationException("Нельзя добавить самого себя в друзья");
@@ -63,13 +62,10 @@ public class UserService {
         User user = getUserById(userId);
         getUserById(friendId); // Проверяем, что друг существует
 
-        // Добавляем друга только в список друзей пользователя
-        user.addFriend(friendId, FriendshipStatus.UNCONFIRMED);
-
-        // Сохраняем обновления в БД
+        user.addFriend(friendId);
         userStorage.updateUser(user);
 
-        log.info("Пользователь {} отправил заявку в друзья пользователю {}", userId, friendId);
+        log.info("Пользователь {} добавил в друзья {}", userId, friendId);
     }
 
     public void confirmFriend(Integer userId, Integer friendId) {

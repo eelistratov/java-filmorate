@@ -18,14 +18,11 @@ import java.util.Optional;
 public class GenreDbStorage implements GenreStorage {
     private final JdbcTemplate jdbcTemplate;
 
-    private final RowMapper<Genre> genreRowMapper = new RowMapper<Genre>() {
-        @Override
-        public Genre mapRow(ResultSet rs, int rowNum) throws SQLException {
-            Genre genre = new Genre();
-            genre.setId(rs.getInt("genre_id"));
-            genre.setName(rs.getString("genre_name"));
-            return genre;
-        }
+    private final RowMapper<Genre> genreRowMapper = (rs, rowNum) -> {
+        Genre genre = new Genre();
+        genre.setId(rs.getInt("genre_id"));
+        genre.setName(rs.getString("genre_name"));
+        return genre;
     };
 
     @Override
@@ -39,5 +36,12 @@ public class GenreDbStorage implements GenreStorage {
         String sql = "SELECT * FROM genres WHERE genre_id = ?";
         List<Genre> genres = jdbcTemplate.query(sql, genreRowMapper, id);
         return genres.stream().findFirst();
+    }
+
+    @Override
+    public boolean genreExists(Integer id) {
+        String sql = "SELECT COUNT(*) FROM genres WHERE genre_id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
+        return count != null && count > 0;
     }
 }

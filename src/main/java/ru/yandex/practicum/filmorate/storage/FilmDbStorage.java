@@ -181,6 +181,7 @@ public class FilmDbStorage implements FilmStorage {
         }
 
         List<Genre> genres = new ArrayList<>(film.getGenres());
+        genres.sort(Comparator.comparingInt(Genre::getId));
 
         jdbcTemplate.batchUpdate(
                 "INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)",

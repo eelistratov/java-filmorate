@@ -8,4 +8,6 @@ public interface GenreStorage {
     List<Genre> getAllGenres();
 
     Optional<Genre> getGenreById(Integer id);
+
+    boolean genreExists(Integer id);
 }

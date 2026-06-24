@@ -8,4 +8,6 @@ public interface MpaRatingStorage {
     List<MpaRating> getAllMpaRatings();
 
     Optional<MpaRating> getMpaRatingById(Integer id);
+
+    boolean mpaExists(Integer id);
 }

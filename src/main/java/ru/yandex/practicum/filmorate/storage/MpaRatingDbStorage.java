@@ -18,15 +18,12 @@ import java.util.Optional;
 public class MpaRatingDbStorage implements MpaRatingStorage {
     private final JdbcTemplate jdbcTemplate;
 
-    private final RowMapper<MpaRating> mpaRowMapper = new RowMapper<MpaRating>() {
-        @Override
-        public MpaRating mapRow(ResultSet rs, int rowNum) throws SQLException {
-            MpaRating mpa = new MpaRating();
-            mpa.setId(rs.getInt("mpa_id"));
-            mpa.setName(rs.getString("mpa_name"));
-            mpa.setDescription(rs.getString("description"));
-            return mpa;
-        }
+    private final RowMapper<MpaRating> mpaRowMapper = (rs, rowNum) -> {
+        MpaRating mpa = new MpaRating();
+        mpa.setId(rs.getInt("mpa_id"));
+        mpa.setName(rs.getString("mpa_name"));
+        mpa.setDescription(rs.getString("description"));
+        return mpa;
     };
 
     @Override
@@ -40,5 +37,12 @@ public class MpaRatingDbStorage implements MpaRatingStorage {
         String sql = "SELECT * FROM mpa_ratings WHERE mpa_id = ?";
         List<MpaRating> ratings = jdbcTemplate.query(sql, mpaRowMapper, id);
         return ratings.stream().findFirst();
+    }
+
+    @Override
+    public boolean mpaExists(Integer id) {
+        String sql = "SELECT COUNT(*) FROM mpa_ratings WHERE mpa_id = ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, id);
+        return count != null && count > 0;
     }
 }

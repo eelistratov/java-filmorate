@@ -11,10 +11,11 @@ import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.controller.UserController;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.service.UserService;
-import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
-import ru.yandex.practicum.filmorate.storage.UserStorage;
+import ru.yandex.practicum.filmorate.storage.*;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -24,8 +25,6 @@ class UserValidationTest {
 
     private static Validator validator;
     private UserController userController;
-    private UserService userService;
-    private UserStorage userStorage;
     private User validUser;
 
     @BeforeAll
@@ -37,8 +36,23 @@ class UserValidationTest {
 
     @BeforeEach
     void setUp() {
-        userStorage = new InMemoryUserStorage();
-        userService = new UserService(userStorage);
+        // Используем заглушки вместо InMemory хранилищ
+        UserStorage userStorage = new UserStorage() {
+            @Override
+            public List<User> getAllUsers() { return List.of(); }
+            @Override
+            public Optional<User> getUserById(Integer id) { return Optional.empty(); }
+            @Override
+            public User addUser(User user) { user.setId(1); return user; }
+            @Override
+            public User updateUser(User user) { return user; }
+            @Override
+            public void deleteUser(Integer id) {}
+            @Override
+            public boolean userExists(Integer id) { return false; }
+        };
+
+        UserService userService = new UserService(userStorage);
         userController = new UserController(userService);
 
         validUser = new User();
@@ -48,6 +62,7 @@ class UserValidationTest {
         validUser.setBirthday(LocalDate.of(1990, 5, 15));
     }
 
+    // Все тесты остаются без изменений
     @Test
     @DisplayName("Должен пройти валидацию с корректными данными")
     void validUserShouldPassValidation() {
@@ -88,7 +103,7 @@ class UserValidationTest {
 
         boolean hasBlankMessage = violations.stream()
                 .anyMatch(v -> v.getMessage().equals("Логин не может быть пустым"));
-        assertTrue(hasBlankMessage, "Должно быть сообщение о пустом логине");
+        assertTrue(hasBlankMessage);
     }
 
     @Test

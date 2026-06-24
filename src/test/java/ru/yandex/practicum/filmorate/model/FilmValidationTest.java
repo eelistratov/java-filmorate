@@ -11,10 +11,12 @@ import org.junit.jupiter.api.Test;
 import ru.yandex.practicum.filmorate.controller.FilmController;
 import ru.yandex.practicum.filmorate.exception.NotFoundException;
 import ru.yandex.practicum.filmorate.service.FilmService;
-import ru.yandex.practicum.filmorate.storage.InMemoryFilmStorage;
-import ru.yandex.practicum.filmorate.storage.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.storage.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -35,10 +37,59 @@ class FilmValidationTest {
 
     @BeforeEach
     void setUp() {
-        FilmService filmService = new FilmService(
-                new InMemoryFilmStorage(),
-                new InMemoryUserStorage()
-        );
+        FilmStorage filmStorage = new FilmStorage() {
+            @Override
+            public List<Film> getAllFilms() {
+                return new ArrayList<>();
+            }
+            @Override
+            public Optional<Film> getFilmById(Integer id) {
+                return Optional.empty();
+            }
+            @Override
+            public Film addFilm(Film film) {
+                film.setId(1);
+                return film;
+            }
+            @Override
+            public Film updateFilm(Film film) {
+                return film;
+            }
+            @Override
+            public void deleteFilm(Integer id) {}
+            @Override
+            public boolean filmExists(Integer id) {
+                return false;
+            }
+        };
+
+        UserStorage userStorage = new UserStorage() {
+            @Override
+            public List<User> getAllUsers() {
+                return new ArrayList<>();
+            }
+            @Override
+            public Optional<User> getUserById(Integer id) {
+                return Optional.empty();
+            }
+            @Override
+            public User addUser(User user) {
+                return user;
+            }
+            @Override
+            public User updateUser(User user) {
+                return user;
+            }
+            @Override
+            public void deleteUser(Integer id) {}
+            @Override
+            public boolean userExists(Integer id) {
+                return false;
+            }
+        };
+
+        // Используем конструктор с 2 параметрами
+        FilmService filmService = new FilmService(filmStorage, userStorage);
         filmController = new FilmController(filmService);
 
         validFilm = new Film();

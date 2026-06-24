@@ -34,7 +34,6 @@ public class UserDbStorage implements UserStorage {
             user.setLogin(rs.getString("login"));
             user.setName(rs.getString("user_name"));
             user.setBirthday(rs.getDate("birthday").toLocalDate());
-            loadFriends(user);
             return user;
         }
     };
@@ -42,13 +41,22 @@ public class UserDbStorage implements UserStorage {
     @Override
     public List<User> getAllUsers() {
         String sql = "SELECT * FROM users ORDER BY user_id";
-        return jdbcTemplate.query(sql, userRowMapper);
+        List<User> users = jdbcTemplate.query(sql, userRowMapper);
+
+        for (User user : users) {
+            loadFriends(user);
+        }
+
+        return users;
     }
 
     @Override
     public Optional<User> getUserById(Integer id) {
         String sql = "SELECT * FROM users WHERE user_id = ?";
         List<User> users = jdbcTemplate.query(sql, userRowMapper, id);
+
+        users.forEach(this::loadFriends);
+
         return users.stream().findFirst();
     }
 
@@ -119,11 +127,13 @@ public class UserDbStorage implements UserStorage {
         String deleteSql = "DELETE FROM friendship WHERE user_id = ?";
         jdbcTemplate.update(deleteSql, user.getId());
 
-        if (user.getFriends() != null && !user.getFriends().isEmpty()) {
-            String sql = "INSERT INTO friendship (user_id, friend_id) VALUES (?, ?)";
-            for (Integer friendId : user.getFriends()) {
-                jdbcTemplate.update(sql, user.getId(), friendId);
-            }
+        if (user.getFriends() == null || user.getFriends().isEmpty()) {
+            return;
+        }
+
+        String sql = "INSERT INTO friendship (user_id, friend_id) VALUES (?, ?)";
+        for (Integer friendId : user.getFriends()) {
+            jdbcTemplate.update(sql, user.getId(), friendId);
         }
     }
 }

@@ -47,7 +47,6 @@ public class FilmDbStorage implements FilmStorage {
                 film.setMpa(mpa);
             }
 
-            loadLikes(film);
             return film;
         }
     };
@@ -65,6 +64,7 @@ public class FilmDbStorage implements FilmStorage {
         for (Film film : films) {
             Set<Genre> genres = getGenresByFilmId(film.getId());
             film.setGenres(genres);
+            loadLikes(film);
         }
 
         return films;
@@ -83,6 +83,7 @@ public class FilmDbStorage implements FilmStorage {
         films.forEach(film -> {
             Set<Genre> genres = getGenresByFilmId(film.getId());
             film.setGenres(genres);
+            loadLikes(film);
         });
 
         return films.stream().findFirst();
@@ -197,12 +198,27 @@ public class FilmDbStorage implements FilmStorage {
         String deleteSql = "DELETE FROM likes WHERE film_id = ?";
         jdbcTemplate.update(deleteSql, film.getId());
 
-        if (film.getLikes() != null && !film.getLikes().isEmpty()) {
-            String sql = "INSERT INTO likes (film_id, user_id) VALUES (?, ?)";
-            for (Integer userId : film.getLikes()) {
-                jdbcTemplate.update(sql, film.getId(), userId);
-            }
+        if (film.getLikes() == null || film.getLikes().isEmpty()) {
+            return;
         }
+
+        List<Integer> userIds = new ArrayList<>(film.getLikes());
+
+        jdbcTemplate.batchUpdate(
+                "INSERT INTO likes (film_id, user_id) VALUES (?, ?)",
+                new BatchPreparedStatementSetter() {
+                    @Override
+                    public void setValues(PreparedStatement ps, int i) throws SQLException {
+                        ps.setInt(1, film.getId());
+                        ps.setInt(2, userIds.get(i));
+                    }
+
+                    @Override
+                    public int getBatchSize() {
+                        return userIds.size();
+                    }
+                }
+        );
     }
 
     private Set<Genre> getGenresByFilmId(Integer filmId) {

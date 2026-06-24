@@ -22,11 +22,17 @@ class FilmDbStorageTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
+    @Autowired
+    private MpaRatingStorage mpaRatingStorage;
+
+    @Autowired
+    private GenreStorage genreStorage;
+
     private FilmDbStorage filmStorage;
 
     @BeforeEach
     void setUp() {
-        filmStorage = new FilmDbStorage(jdbcTemplate);
+        filmStorage = new FilmDbStorage(jdbcTemplate, mpaRatingStorage, genreStorage);
     }
 
     @Test
@@ -39,7 +45,7 @@ class FilmDbStorageTest {
 
         MpaRating mpa = new MpaRating();
         mpa.setId(1);
-        film.setMpa(mpa);  // ← setMpa
+        film.setMpa(mpa);
 
         Film saved = filmStorage.addFilm(film);
 

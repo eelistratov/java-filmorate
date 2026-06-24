@@ -3,6 +3,7 @@ package ru.yandex.practicum.filmorate.storage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Primary;
+import org.springframework.jdbc.core.BatchPreparedStatementSetter;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
@@ -36,16 +37,15 @@ public class FilmDbStorage implements FilmStorage {
             film.setReleaseDate(rs.getDate("release_date").toLocalDate());
             film.setDuration(rs.getInt("duration"));
 
-            // Загружаем рейтинг MPA
-            int mpaId = rs.getInt("mpa_rating_id");
+            // Загружаем MPA из JOIN
+            int mpaId = rs.getInt("mpa_id");
             if (mpaId != 0) {
-                MpaRating mpa = getMpaRatingById(mpaId);
-                film.setMpa(mpa);  // ← setMpa
+                MpaRating mpa = new MpaRating();
+                mpa.setId(mpaId);
+                mpa.setName(rs.getString("mpa_name"));
+                mpa.setDescription(rs.getString("mpa_description"));
+                film.setMpa(mpa);
             }
-
-            // Загружаем жанры
-            Set<Genre> genres = getGenresByFilmId(film.getId());
-            film.setGenres(genres);
 
             return film;
         }
@@ -53,14 +53,40 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public List<Film> getAllFilms() {
-        String sql = "SELECT * FROM films ORDER BY film_id";
-        return jdbcTemplate.query(sql, filmRowMapper);
+        // JOIN с mpa_ratings для получения всех данных одним запросом
+        String sql = "SELECT f.*, " +
+                "m.mpa_id, m.mpa_name, m.description AS mpa_description " +
+                "FROM films f " +
+                "LEFT JOIN mpa_ratings m ON f.mpa_rating_id = m.mpa_id " +
+                "ORDER BY f.film_id";
+
+        List<Film> films = jdbcTemplate.query(sql, filmRowMapper);
+
+        // Загружаем жанры для каждого фильма отдельно (можно оптимизировать, но для простоты оставляем)
+        for (Film film : films) {
+            Set<Genre> genres = getGenresByFilmId(film.getId());
+            film.setGenres(genres);
+        }
+
+        return films;
     }
 
     @Override
     public Optional<Film> getFilmById(Integer id) {
-        String sql = "SELECT * FROM films WHERE film_id = ?";
+        String sql = "SELECT f.*, " +
+                "m.mpa_id, m.mpa_name, m.description AS mpa_description " +
+                "FROM films f " +
+                "LEFT JOIN mpa_ratings m ON f.mpa_rating_id = m.mpa_id " +
+                "WHERE f.film_id = ?";
+
         List<Film> films = jdbcTemplate.query(sql, filmRowMapper, id);
+
+        // Загружаем жанры для найденного фильма
+        films.forEach(film -> {
+            Set<Genre> genres = getGenresByFilmId(film.getId());
+            film.setGenres(genres);
+        });
+
         return films.stream().findFirst();
     }
 
@@ -70,7 +96,7 @@ public class FilmDbStorage implements FilmStorage {
                 "VALUES (?, ?, ?, ?, ?)";
         KeyHolder keyHolder = new GeneratedKeyHolder();
 
-        Integer mpaId = film.getMpa() != null ? film.getMpa().getId() : null;  // ← getMpa
+        Integer mpaId = film.getMpa() != null ? film.getMpa().getId() : null;
 
         jdbcTemplate.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql, new String[]{"film_id"});
@@ -93,7 +119,7 @@ public class FilmDbStorage implements FilmStorage {
         String sql = "UPDATE films SET film_name = ?, description = ?, release_date = ?, duration = ?, mpa_rating_id = ? " +
                 "WHERE film_id = ?";
 
-        Integer mpaId = film.getMpa() != null ? film.getMpa().getId() : null;  // ← getMpa
+        Integer mpaId = film.getMpa() != null ? film.getMpa().getId() : null;
 
         int rowsAffected = jdbcTemplate.update(sql,
                 film.getName(),
@@ -146,26 +172,33 @@ public class FilmDbStorage implements FilmStorage {
         return new HashSet<>(genreList);
     }
 
-    private MpaRating getMpaRatingById(Integer id) {
-        String sql = "SELECT * FROM mpa_ratings WHERE mpa_id = ?";
-        return jdbcTemplate.queryForObject(sql, (rs, rowNum) -> {
-            MpaRating mpa = new MpaRating();
-            mpa.setId(rs.getInt("mpa_id"));
-            mpa.setName(rs.getString("mpa_name"));
-            mpa.setDescription(rs.getString("description"));
-            return mpa;
-        }, id);
-    }
-
+    /**
+     * Сохраняет жанры фильма с использованием пакетной вставки (batchUpdate)
+     * для повышения производительности.
+     */
     private void saveFilmGenres(Film film) {
         if (film.getGenres() == null || film.getGenres().isEmpty()) {
             return;
         }
 
-        String sql = "INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)";
-        for (Genre genre : film.getGenres()) {
-            jdbcTemplate.update(sql, film.getId(), genre.getId());
-        }
+        List<Genre> genres = new ArrayList<>(film.getGenres());
+
+        jdbcTemplate.batchUpdate(
+                "INSERT INTO film_genres (film_id, genre_id) VALUES (?, ?)",
+                new BatchPreparedStatementSetter() {
+                    @Override
+                    public void setValues(PreparedStatement ps, int i) throws SQLException {
+                        Genre genre = genres.get(i);
+                        ps.setInt(1, film.getId());
+                        ps.setInt(2, genre.getId());
+                    }
+
+                    @Override
+                    public int getBatchSize() {
+                        return genres.size();
+                    }
+                }
+        );
     }
 
     private void updateFilmGenres(Film film) {

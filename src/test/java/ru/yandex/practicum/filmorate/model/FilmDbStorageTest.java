@@ -22,17 +22,14 @@ class FilmDbStorageTest {
     @Autowired
     private JdbcTemplate jdbcTemplate;
 
-    @Autowired
-    private MpaRatingStorage mpaRatingStorage;
-
-    @Autowired
-    private GenreStorage genreStorage;
-
     private FilmDbStorage filmStorage;
 
     @BeforeEach
     void setUp() {
-        filmStorage = new FilmDbStorage(jdbcTemplate, mpaRatingStorage, genreStorage);
+        // Создаём реальные хранилища напрямую
+        MpaRatingStorage mpaStorage = new MpaRatingDbStorage(jdbcTemplate);
+        GenreStorage genreStorage = new GenreDbStorage(jdbcTemplate);
+        filmStorage = new FilmDbStorage(jdbcTemplate, mpaStorage, genreStorage);
     }
 
     @Test

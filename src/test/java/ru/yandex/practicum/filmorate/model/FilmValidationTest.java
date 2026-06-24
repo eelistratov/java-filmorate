@@ -14,7 +14,10 @@ import ru.yandex.practicum.filmorate.service.FilmService;
 import ru.yandex.practicum.filmorate.storage.*;
 
 import java.time.LocalDate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.Set;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -34,21 +37,41 @@ class FilmValidationTest {
 
     @BeforeEach
     void setUp() {
-        // Создаём реальные хранилища
         FilmStorage filmStorage = new InMemoryFilmStorage();
         UserStorage userStorage = new InMemoryUserStorage();
 
-        // Создаём заглушки для MPA и Genre (не используются в тестах валидации)
         MpaRatingStorage mpaStorage = new MpaRatingStorage() {
-            @Override public List<MpaRating> getAllMpaRatings() { return new ArrayList<>(); }
-            @Override public Optional<MpaRating> getMpaRatingById(Integer id) { return Optional.empty(); }
-            @Override public boolean mpaExists(Integer id) { return false; }
+            @Override
+            public List<MpaRating> getAllMpaRatings() {
+                return new ArrayList<>();
+            }
+
+            @Override
+            public Optional<MpaRating> getMpaRatingById(Integer id) {
+                return Optional.empty();
+            }
+
+            @Override
+            public boolean mpaExists(Integer id) {
+                return false;
+            }
         };
 
         GenreStorage genreStorage = new GenreStorage() {
-            @Override public List<Genre> getAllGenres() { return new ArrayList<>(); }
-            @Override public Optional<Genre> getGenreById(Integer id) { return Optional.empty(); }
-            @Override public boolean genreExists(Integer id) { return false; }
+            @Override
+            public List<Genre> getAllGenres() {
+                return new ArrayList<>();
+            }
+
+            @Override
+            public Optional<Genre> getGenreById(Integer id) {
+                return Optional.empty();
+            }
+
+            @Override
+            public boolean genreExists(Integer id) {
+                return false;
+            }
         };
 
         FilmService filmService = new FilmService(filmStorage, userStorage, mpaStorage, genreStorage);
